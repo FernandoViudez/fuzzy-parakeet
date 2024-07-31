@@ -1,5 +1,9 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { FilmRepository } from '../film/repository/film.repository';
+import { Film } from '../film/schema/types/film.type';
+import { CONFIG_PROVIDER } from '../config/config';
+import { ConfigService } from '@nestjs/config';
+import { WorkerConfig } from '../config/worker/config';
 
 @Injectable()
 export class DeleteInBatchService {
@@ -8,10 +12,11 @@ export class DeleteInBatchService {
   constructor(
     @Inject(FilmRepository)
     private readonly filmRepository: FilmRepository,
+    @Inject(CONFIG_PROVIDER)
+    private readonly configService: ConfigService<WorkerConfig>,
   ) {}
 
-  // TODO: add option to delete also local films without external ids (created by a normal user)
-  async execute(extraFilms: string[]) {
+  async execute(extraFilms: Film[]) {
     this.logger.log('Begin delete extra films process...');
 
     const stats = {
@@ -20,14 +25,18 @@ export class DeleteInBatchService {
       failure: [],
     };
 
-    const promises = extraFilms.map(async (externalId) => {
+    const promises = extraFilms.map(async (film) => {
+      if (!film.externalId && !this.configService.get('deleteLocalFilms')) {
+        return true;
+      }
+
       const deletedCount = await this.filmRepository.delete({
-        externalId,
+        filmId: film.filmId,
       });
 
       if (deletedCount !== 1) {
-        this.logger.error(`Error deleting extra film with id ${externalId}`);
-        stats.failure.push(externalId);
+        this.logger.error(`Error deleting extra film with id ${film.filmId}`);
+        stats.failure.push(film.filmId);
         stats.failureCount++;
         return;
       }

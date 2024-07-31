@@ -5,7 +5,6 @@ import {
   Logger,
 } from '@nestjs/common';
 import { ExternalFilm } from '../common/types/external-film';
-import { FindAllFilmsService } from '../film/service/find-all/find-all.service';
 import { CONFIG_PROVIDER } from '../config/config';
 import { ConfigService } from '@nestjs/config';
 import { Order } from '../common/enum/order.enum';
@@ -16,17 +15,22 @@ import { CreateInBatchService } from './create-in-batch.service';
 import { DeleteInBatchService } from './delete-in-batch.service';
 import { UpdateAndSyncFilmsService } from './update.service';
 import { Cron } from '@nestjs/schedule';
-import { FilmDto } from '../common/dto/film.dto';
+import { FilmRepository } from '../film/repository/film.repository';
+import { Op } from 'sequelize';
+import { Film } from '../film/schema/types/film.type';
 
 @Injectable()
 export class SyncFilmsService {
   private readonly logger = new Logger(SyncFilmsService.name);
   private batchSize: number;
+  private missingFilmsSet = new Set<string>();
+  private externalFilmsMap = new Map<string, ExternalFilm>();
 
   constructor(
     @Inject(CONFIG_PROVIDER)
     private readonly configService: ConfigService<WorkerConfig>,
-    private readonly findAllFilmsService: FindAllFilmsService,
+    @Inject(FilmRepository)
+    private readonly filmRepository: FilmRepository,
     private readonly httpService: HttpService,
     private readonly createInBatchService: CreateInBatchService,
     private readonly deleteInBatchService: DeleteInBatchService,
@@ -49,31 +53,40 @@ export class SyncFilmsService {
   async syncFilms() {
     const externalFilms = await this.getAllExternalFilms();
 
+    this.missingFilmsSet = new Set();
+    this.externalFilmsMap = new Map();
+    externalFilms.map((film) => {
+      const filmUrlSplitted = film.url.split('/');
+      const key = filmUrlSplitted[filmUrlSplitted.length - 2];
+      this.externalFilmsMap.set(key, film);
+      this.missingFilmsSet.add(key);
+    });
+
     let hasMorePages = false;
     let pageNumber = 1;
-    let offsetId: number;
+    let offsetId: Date;
     do {
       const pageStartTime = performance.now();
       this.logger.log(`Getting films page ${pageNumber}`);
 
-      const { films } = await this.findAllFilmsService.execute({
-        order: Order.ASC,
-        orderBy: 'episode_id',
-        ...(offsetId && { offset: offsetId }),
-        limit: this.batchSize,
-      });
-      offsetId = films[films.length - 1]?.episode_id;
+      const films = await this.findAllFilmsByBatch(offsetId);
+      offsetId = films[films.length - 1]?.createdAt;
 
       this.logger.log(`Found ${films.length} local films`);
 
       hasMorePages = films.length === this.batchSize;
 
-      await this.processFilms(externalFilms, films);
+      await this.processFilms(films);
 
       this.logger.log(
         `Page ${pageNumber++} sent. Took ${performance.now() - pageStartTime}ms`,
       );
     } while (hasMorePages);
+
+    await this.createInBatchService.execute(
+      Array.from(this.missingFilmsSet.values()),
+      this.externalFilmsMap,
+    );
   }
 
   private async getAllExternalFilms(): Promise<ExternalFilm[]> {
@@ -91,46 +104,47 @@ export class SyncFilmsService {
     }
   }
 
-  private async processFilms(
-    externalFilms: ExternalFilm[],
-    localFilms: FilmDto[],
-  ) {
-    const externalFilmsMap = new Map<string, ExternalFilm>();
-    externalFilms.map((film) => {
-      const filmUrlSplitted = film.url.split('/');
-      const key = filmUrlSplitted[filmUrlSplitted.length - 2];
-      externalFilmsMap.set(key, film);
-    });
+  private async processFilms(localFilms: Film[]) {
+    const localFilmsMap = new Map<string, Film>();
+    const matchingIds = [];
 
-    const localFilmsMap = new Map<string, FilmDto>();
-    localFilms.map((film) => {
+    localFilms.forEach((film) => {
       if (film.externalId) {
+        this.externalFilmsMap.has(film.externalId)
+          ? matchingIds.push(film.externalId)
+          : null;
+
         localFilmsMap.set(film.externalId, film);
+
+        this.missingFilmsSet.delete(film.externalId);
       }
     });
 
-    // TODO: add option to delete film with no external id defined (local films)
-
-    const extraFilms = Array.from(localFilmsMap.keys()).filter(
-      (externalId) => !externalFilmsMap.has(externalId),
-    );
-
-    const missingFilms = Array.from(externalFilmsMap.keys()).filter(
-      (externalId) => !localFilmsMap.has(externalId),
-    );
-
-    const matchingFilms = Array.from(localFilmsMap.keys()).filter(
-      (externalId) => externalFilmsMap.has(externalId),
+    const extraFilms = localFilms.filter(
+      (film) => !film.externalId || !this.externalFilmsMap.has(film.externalId),
     );
 
     await this.updateAndSyncService.execute(
-      matchingFilms,
-      externalFilmsMap,
+      matchingIds,
+      this.externalFilmsMap,
       localFilmsMap,
     );
 
     await this.deleteInBatchService.execute(extraFilms);
+  }
 
-    await this.createInBatchService.execute(missingFilms, externalFilmsMap);
+  private async findAllFilmsByBatch(offsetId?: Date) {
+    const query: any = {};
+
+    if (offsetId) {
+      query.createdAt = {
+        [Op.gt]: offsetId,
+      };
+    }
+
+    return await this.filmRepository.findAll(query, {
+      order: [['createdAt', Order.ASC]],
+      limit: this.configService.get('batchSize'),
+    });
   }
 }

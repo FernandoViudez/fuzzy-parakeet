@@ -2,7 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ExternalFilm } from '../common/types/external-film';
 import * as _ from 'lodash';
 import { FilmRepository } from '../film/repository/film.repository';
-import { FilmDto } from '../common/dto/film.dto';
+import { Film } from '../film/schema/types/film.type';
 
 @Injectable()
 export class UpdateAndSyncFilmsService {
@@ -15,7 +15,7 @@ export class UpdateAndSyncFilmsService {
   async execute(
     matchingIds: string[],
     externalFilmsMap: Map<string, ExternalFilm>,
-    localFilmsMap: Map<string, FilmDto>,
+    localFilmsMap: Map<string, Film>,
   ) {
     this.logger.log('Beginning update matching films process');
 
@@ -85,18 +85,18 @@ export class UpdateAndSyncFilmsService {
     stats.success++;
   }
 
-  private mapLocalFilmToExternal(localFilm: FilmDto): ExternalFilm {
+  private mapLocalFilmToExternal(localFilm: Film): ExternalFilm {
     return {
       created: localFilm.created,
       director: localFilm.director,
       edited: localFilm.edited,
       episode_id: localFilm.episode_id,
       opening_crawl: localFilm.opening_crawl,
-      characters: localFilm.characters,
-      planets: localFilm.planets,
-      species: localFilm.species,
-      starships: localFilm.starships,
-      vehicles: localFilm.vehicles,
+      characters: JSON.parse(localFilm.characters),
+      planets: JSON.parse(localFilm.planets),
+      species: JSON.parse(localFilm.species),
+      starships: JSON.parse(localFilm.starships),
+      vehicles: JSON.parse(localFilm.vehicles),
       producer: localFilm.producer,
       release_date: localFilm.release_date,
       title: localFilm.title,
