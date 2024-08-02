@@ -9,7 +9,7 @@
 4. npm i
 5. npm run start
 
-## Steps to run app with docker ⚡ :rocket:
+## Steps to run app with docker ⚡
 1. docker compose up
 2. open http://localhost:3000 
 
