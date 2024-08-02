@@ -1,4 +1,4 @@
-# Steps to run app :rocket:
+## Steps to run app :rocket:
 1. copy .env.test template 
 2. replace name .env.test to .env
 3. replace .env information with valid one
@@ -9,7 +9,7 @@
 ### Project Notes:
 - worker and app are in the same app
 
-- to run worker, you must set env var ENABLE_SYNC_WORKER to "true"
+- to run worker, you must set env var `ENABLE_SYNC_WORKER` to "true"
 
 - local films and external films differs in one property: externalId.
 externalId field its used to distinguish one from other.
