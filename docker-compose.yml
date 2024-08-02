@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    container_name: mssql
+    environment:
+      SA_PASSWORD: "yourStrong(!)Password"
+      ACCEPT_EULA: "Y"
+    ports:
+      - "1433:1433"
+    networks:
+      - app-network
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: api
+    environment:
+      JWT_SECRET: 'asdasd'
+      SQL_DB_HOST: 'mssql'
+      SQL_DB_USERNAME: 'sa'
+      SQL_DB_PASSWORD: 'yourStrong(!)Password'
+      SQL_DISABLE_SSL: 'true'
+    ports:
+      - "3000:3000"
+    depends_on:
+      - mssql
+    networks:
+      - app-network
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: worker
+    environment:
+      JWT_SECRET: 'asdasd'
+      SQL_DB_USERNAME: 'sa'
+      SQL_DB_PASSWORD: 'yourStrong(!)Password'
+      SQL_DISABLE_SSL: 'true'
+      SQL_DB_HOST: 'mssql'
+      ENABLE_SYNC_WORKER: 'true'
+      WORKER_BATCH_SIZE: '10'
+    depends_on:
+      - mssql
+    networks:
+      - app-network
+
+networks:
+  app-network:
