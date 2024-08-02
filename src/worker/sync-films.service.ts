@@ -39,7 +39,7 @@ export class SyncFilmsService {
     this.batchSize = configService.get('batchSize');
   }
 
-  // execute each 20 seconds just for testing quickly (or depending on the needs)
+  // // execute each 20 seconds just for testing quickly (or depending on the needs)
   @Cron('*/20 * * * * *')
   async execute() {
     this.logger.log(`# Running`);
@@ -87,6 +87,9 @@ export class SyncFilmsService {
       Array.from(this.missingFilmsSet.values()),
       this.externalFilmsMap,
     );
+
+    this.missingFilmsSet.clear();
+    this.externalFilmsMap.clear();
   }
 
   private async getAllExternalFilms(): Promise<ExternalFilm[]> {
@@ -142,9 +145,14 @@ export class SyncFilmsService {
       };
     }
 
-    return await this.filmRepository.findAll(query, {
-      order: [['createdAt', Order.ASC]],
-      limit: this.configService.get('batchSize'),
-    });
+    try {
+      return await this.filmRepository.findAll(query, {
+        order: [['createdAt', Order.ASC]],
+        limit: this.batchSize,
+      });
+    } catch (error) {
+      this.logger.error(error);
+      return [];
+    }
   }
 }
