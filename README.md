@@ -1,9 +1,17 @@
-## Steps to run app :rocket:
-1. copy .env.test template 
-2. replace name .env.test to .env
-3. replace .env information with valid one
+## Requirements
+- node or nvm with node in v20.9.0
+- docker (to run docker locally)
+
+## Steps to run app locally :rocket:
+1. copy `.env.test` template 
+2. replace name `.env.test` to `.env`
+3. replace `.env` information with valid one
 4. npm i
 5. npm run start
+
+## Steps to run app with docker ⚡ :rocket:
+1. docker compose up
+2. open http://localhost:3000 
 
 
 ### Project Notes:
