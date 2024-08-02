@@ -12,7 +12,14 @@ import { Role } from '../../common/enum/role.enum';
 import { createPrefixedId } from '../../common/helpers/create-prefixed-id';
 
 const USER_PREFIX = 'usr';
-@Table({ tableName: 'User' })
+@Table({
+  tableName: 'User',
+  defaultScope: {
+    attributes: {
+      exclude: ['password'],
+    },
+  },
+})
 export class UserModel extends BaseModel implements User {
   @Column({
     type: DataType.STRING,

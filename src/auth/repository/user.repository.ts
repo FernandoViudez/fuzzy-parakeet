@@ -23,6 +23,10 @@ export interface UserRepository {
     filter: Queryable<UserModel>,
     options?: QueryOptions<UserModel>,
   ): Promise<number>;
+  findWithPassword(
+    email: string,
+    options?: QueryOptions<UserModel>,
+  ): Promise<UserModel | null>;
 }
 
 export const UserRepository = Symbol('UserRepository');

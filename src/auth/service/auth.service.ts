@@ -22,9 +22,7 @@ export class AuthService {
   ) {}
 
   async login(req: LoginDto) {
-    const user = await this.userRepository.findOne({
-      email: req.email,
-    });
+    const user = await this.userRepository.findWithPassword(req.email);
 
     if (!user) {
       throw new BadRequestException('Unauthorized: Incorrect credentials');
