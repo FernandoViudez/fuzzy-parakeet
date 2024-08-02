@@ -40,4 +40,8 @@ import { ScheduleModule } from '@nestjs/schedule';
     DeleteInBatchService,
   ],
 })
-export class WorkerModule {}
+export class WorkerModule {
+  constructor(private readonly syncFilmsService: SyncFilmsService) {
+    syncFilmsService.syncFilms();
+  }
+}

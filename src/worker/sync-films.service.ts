@@ -18,6 +18,8 @@ import { Cron } from '@nestjs/schedule';
 import { FilmRepository } from '../film/repository/film.repository';
 import { Op } from 'sequelize';
 import { Film } from '../film/schema/types/film.type';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+require('dotenv').config();
 
 @Injectable()
 export class SyncFilmsService {
@@ -40,7 +42,7 @@ export class SyncFilmsService {
   }
 
   // // execute each 20 seconds just for testing quickly (or depending on the needs)
-  @Cron('*/20 * * * * *')
+  @Cron(process.env.WORKER_CRON_EXECUTION_TIME)
   async execute() {
     this.logger.log(`# Running`);
     const startTime = performance.now();
