@@ -41,8 +41,7 @@ export class SyncFilmsService {
     this.batchSize = configService.get('batchSize');
   }
 
-  // // execute each 20 seconds just for testing quickly (or depending on the needs)
-  @Cron(process.env.WORKER_CRON_EXECUTION_TIME)
+  @Cron(process.env.WORKER_CRON_EXECUTION_TIME || '*/20 * * * * *')
   async execute() {
     this.logger.log(`# Running`);
     const startTime = performance.now();

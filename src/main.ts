@@ -4,17 +4,19 @@ import { GlobalValidationPipe } from './common/pipe/validation-pipe';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import { WorkerModule } from './worker/worker.module';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+require('dotenv').config();
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  const configService = app.get(ConfigService);
-  const enableWorker = configService.get('enableWorker');
-
-  if (enableWorker) {
-    const worker = await NestFactory.createMicroservice(WorkerModule);
-    await worker.listen();
+  if (process.env.ENABLE_SYNC_WORKER === 'true') {
+    const worker = await NestFactory.create(WorkerModule);
+    const configService = worker.get(ConfigService);
+    await worker.listen(configService.get('port'));
     return;
   }
+
+  const app = await NestFactory.create(AppModule);
+  const configService = app.get(ConfigService);
 
   app.useGlobalPipes(new GlobalValidationPipe());
 
