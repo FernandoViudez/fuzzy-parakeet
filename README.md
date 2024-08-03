@@ -15,6 +15,10 @@
 
 
 ### Project Notes:
+- init user admin: 
+  - email: bereyaguco@gmail.com
+  - password: Conexa4321.
+
 - worker and app are in the same app
 
 - to run worker, you must set env var `ENABLE_SYNC_WORKER` to "true"
