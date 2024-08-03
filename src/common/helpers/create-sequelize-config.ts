@@ -28,11 +28,9 @@ export const createSequelizeConfig = (
     models: [],
     autoLoadModels: true,
     dialectOptions: {
-      ssl: !disableSsl
-        ? {
-            rejectUnauthorized: false,
-          }
-        : false,
+      options: {
+        encrypt: !disableSsl,
+      },
     },
   };
 };
